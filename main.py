@@ -30,6 +30,23 @@ def index():
 
 @app.route('/txtpdf', methods=['POST'])
 def text_to_pdf():
+    """
+    Convert uploaded text files to PDFs
+    ---
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: files
+        in: formData
+        type: file
+        required: true
+        description: Upload one or more .txt files
+    responses:
+      200:
+        description: Upload successful, returns processing time
+      400:
+        description: Bad request (e.g., no files provided, invalid file type)
+    """
     if 'files' not in request.files:
         return jsonify({'error': 'No files part in request'}), 400
     
@@ -52,7 +69,7 @@ def text_to_pdf():
         pdf.set_font("Arial", size=10)
         
         for line in lines:
-            pdf.cell(200, 10, txt=line.strip(), ln=True)
+            pdf.multi_cell(200, 10, txt=line.strip().encode('latin-1', 'replace').decode('latin-1'))
         
         pdf_filename = file.filename.rsplit('.', 1)[0] + ".pdf"
         pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], pdf_filename)
