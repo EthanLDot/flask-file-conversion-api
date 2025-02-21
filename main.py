@@ -4,6 +4,7 @@ import os, time
 from flasgger import Swagger
 import awsgi
 import pandas as pd
+import markdown
 
 app = Flask(__name__)
 app.config['SWAGGER'] = {
@@ -120,6 +121,49 @@ def json_to_csv():
     print("Request complete")
     print(str(time_elapsed) + 's')
     return jsonify({'message': 'Upload successful', 'time_elapsed': time_elapsed}), 200
+
+@app.route('/mdhtml', methods=['POST'])
+def md_to_html():
+    """
+    Convert uploaded markdown to HTML files. Some help from https://www.digitalocean.com/community/tutorials/how-to-use-python-markdown-to-convert-markdown-text-to-html
+    ---
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: files
+        in: formData
+        type: file
+        required: true
+        description: Upload one or more .md files
+    responses:
+      200:
+        description: Upload successful, returns processing time
+      400:
+        description: Bad request (e.g., no files provided, invalid file type)
+    """
+    if 'files' not in request.files:
+        return jsonify({'error': 'No files part in request'}), 400
+    
+    files = request.files.getlist('files')
+    if not files:
+        return jsonify({'error': 'No files uploaded'}), 400
+    start_time = time.time()
+    for file in files:
+        if file.filename == '' or not file.filename.endswith('.md'):
+            continue
+        file_start_time = time.time()
+        text = file.read().decode('utf-8')
+        # print(text)
+        html = markdown.markdown(text)
+        html_filename = file.filename.rsplit('.', 1)[0] + ".html"
+        with open(os.path.join(app.config['UPLOAD_FOLDER'], html_filename), 'w') as f:
+            f.write(html)
+        print(str(time.time() - file_start_time) + 's')
+    time_elapsed = time.time() - start_time
+    print("Request complete")
+    print(str(time_elapsed) + 's')
+    return jsonify({'message': 'Upload successful', 'time_elapsed': time_elapsed}), 200
+
 
 @app.route('/files', methods=['GET'])
 def list_files():
